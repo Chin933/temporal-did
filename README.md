@@ -2,7 +2,7 @@
 
 A Python toolkit for diagnosing and correcting temporal misalignment in historical difference-in-differences research.
 
-[![Tests](https://github.com/Chin933/qing_tax/actions/workflows/tests.yml/badge.svg)](https://github.com/Chin933/qing_tax/actions/workflows/tests.yml)
+[![Tests](https://github.com/Chin933/temporal-did/actions/workflows/tests.yml/badge.svg)](https://github.com/Chin933/temporal-did/actions/workflows/tests.yml)
 
 ## The Problem
 
@@ -31,8 +31,8 @@ Given your cross-section years and shock year, `timing-mismatch` provides:
 ## Installation
 
 ```bash
-git clone https://github.com/Chin933/qing_tax.git
-cd qing_tax
+git clone https://github.com/Chin933/temporal-did.git
+cd temporal-did
 pip install -e .
 ```
 
@@ -103,35 +103,19 @@ mc = run_monte_carlo(
     true_att=1.0,
     dynamics="decaying",
     decay_rate=0.95,
-    adjustment_rho=0.95,  # correctly specified
+    adjustment_rho=0.95,
 )
 print(mc.attrs["summary"])
-#               mean_bias    rmse  std_estimate
-# strategy
-# standard        -0.0923  0.1012        0.0437
-# ar1_adjusted     0.0011  0.0452        0.0492
-# monotone_lb     -0.0923  0.1012        0.0437
 
 fig = plot_monte_carlo(mc)
 ```
 
 ## Theoretical Background
 
-The key parameter is the **temporal position**:
+See [THEORY.md](THEORY.md) for the full derivation of the bias formula, mismatch severity, and monotone lower bound.
 
-$$\tau = \frac{t^* - t_1}{t_2 - t_1} \in (0, 1)$$
-
-**Mismatch severity** $= 4\tau(1-\tau)$ is maximized at $\tau = 0.5$ (shock exactly midway) and zero when the shock coincides with a cross-section year.
-
-Under the AR(1) model $\text{ATT}(t) = \theta \cdot \rho^{t - t^*}$:
-
-| Condition | Consequence |
-|-----------|-------------|
-| $\rho = 1$ (constant) | $\text{DiD}(t_1, t_2) = \text{ATT}(t^*)$; no bias |
-| $\rho < 1$ (decaying) | $\text{DiD}(t_1, t_2) < \text{ATT}(t^*)$; standard DiD under-estimates |
-| $\rho > 1$ (growing) | $\text{DiD}(t_1, t_2) > \text{ATT}(t^*)$; standard DiD over-estimates |
-
-Under monotone non-increasing effects, $\text{DiD}(t_1, t_2)$ is a valid lower bound on $\text{ATT}(t^*)$ regardless of the exact decay process.
+The key parameter is the **temporal position** $\tau = (t^* - t_1)/(t_2 - t_1) \in (0,1)$.
+**Mismatch severity** $= 4\tau(1-\tau)$ is maximized at $\tau = 0.5$ and zero when the shock coincides with a cross-section year.
 
 ## Citation
 
@@ -140,7 +124,7 @@ Under monotone non-increasing effects, $\text{DiD}(t_1, t_2)$ is a valid lower b
   title  = {Timing Mismatch in Historical Difference-in-Differences},
   author = {Zhou, Qinnan},
   year   = {2026},
-  url    = {https://github.com/Chin933/qing_tax}
+  url    = {https://github.com/Chin933/temporal-did}
 }
 ```
 

@@ -6,8 +6,8 @@ county-level data available only at **1796** and **1820**.
 ## Install
 
 ```bash
-git clone https://github.com/Chin933/qing_tax.git
-cd qing_tax && pip install -e .
+git clone https://github.com/Chin933/temporal-did.git
+cd temporal-did && pip install -e .
 ```
 
 ---
@@ -117,7 +117,7 @@ mc = run_monte_carlo(
     true_att=1.0,
     dynamics="decaying",
     decay_rate=0.95,
-    adjustment_rho=0.95,  # correctly specified
+    adjustment_rho=0.95,
     seed=0,
 )
 print(mc.attrs["summary"])
