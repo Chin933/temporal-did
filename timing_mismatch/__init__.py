@@ -1,15 +1,34 @@
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
-from .diagnostics import DiagnosticsOutput, StrategyResult, timing_mismatch_diagnostics
+from .classify import CaseClassification, PostDiD
+from .diagnostics import (
+    DiagnosticsOutput,
+    StrategyResult,
+    TemporalMismatchResult,
+    diagnose,
+    timing_mismatch_diagnostics,
+)
 from .plot import (
     plot_diagnostics,
+    plot_identified_set,
     plot_monte_carlo,
+    plot_post_dids,
     plot_sensitivity,
     plot_strategy_comparison,
+    plot_temporal_mismatch,
 )
 
 __all__ = [
     "__version__",
+    # New multi-period API
+    "diagnose",
+    "TemporalMismatchResult",
+    "CaseClassification",
+    "PostDiD",
+    "plot_temporal_mismatch",
+    "plot_post_dids",
+    "plot_identified_set",
+    # Legacy single-pair API
     "timing_mismatch_diagnostics",
     "DiagnosticsOutput",
     "StrategyResult",
