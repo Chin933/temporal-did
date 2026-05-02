@@ -6,14 +6,14 @@ A Python toolkit for diagnosing and correcting temporal misalignment in historic
 
 ## The Problem
 
-In historical empirical research, a policy shock at year $t^*$ often falls between available cross-sections $t_1 < t^* < t_2$. The naive approach — treating $t_2$ as the post-period — estimates the treatment effect at $t_2$, not at the shock year:
+In historical empirical research, a policy shock at year $t^{\ast}$ often falls between available cross-sections $t_1 < t^{\ast} < t_2$. The naive approach — treating $t_2$ as the post-period — estimates the treatment effect at $t_2$, not at the shock year:
 
-$$\text{DiD}(t_1, t_2) = \hat{\text{ATT}}(t_2) \neq \text{ATT}(t^*)$$
+$$\text{DiD}(t_1, t_2) = \hat{\text{ATT}}(t_2) \neq \text{ATT}(t^{\ast})$$
 
-**Example:** You study an 1800 policy reform, but only have prefectural records for 1796 and 1820. Depending on whether treatment effects decay, persist, or grow over the 20-year window, the mismatch between your estimate and the true effect at $t^*$ can be substantial.
+**Example:** You study an 1800 policy reform, but only have prefectural records for 1796 and 1820. Depending on whether treatment effects decay, persist, or grow over the 20-year window, the mismatch between your estimate and the true effect at $t^{\ast}$ can be substantial.
 
 The bias depends on:
-- **Temporal position** — how close is $t^*$ to each cross-section?
+- **Temporal position** — how close is $t^{\ast}$ to each cross-section?
 - **Treatment effect dynamics** — do effects decay, persist, or accumulate?
 - **Pre-trend shape** — linear or non-linear?
 
@@ -23,9 +23,9 @@ Given your cross-section years and shock year, `timing-mismatch` provides:
 
 | Output | Description |
 |--------|-------------|
-| **Mismatch severity** | $4\tau(1-\tau)$ where $\tau = (t^* - t_1)/(t_2 - t_1)$; equals 1 at the midpoint |
+| **Mismatch severity** | $4\tau(1-\tau)$ where $\tau = (t^{\ast} - t_1)/(t_2 - t_1)$; equals 1 at the midpoint |
 | **Three alignment estimates** | Under different assumptions about treatment dynamics |
-| **Sensitivity analysis** | Implied $\text{ATT}(t^*)$ as a function of assumed decay rate $\rho$ |
+| **Sensitivity analysis** | Implied $\text{ATT}(t^{\ast})$ as a function of assumed decay rate $\rho$ |
 | **Monte Carlo** | Bias and RMSE under known DGPs |
 
 ## Installation
@@ -68,21 +68,21 @@ fig.savefig("diagnostics.png", dpi=150, bbox_inches="tight")
 ## Alignment Strategies
 
 ### `standard`
-Plain DiD using $(t_1, t_2)$. Estimates $\text{ATT}(t_2)$, not $\text{ATT}(t^*)$.
+Plain DiD using $(t_1, t_2)$. Estimates $\text{ATT}(t_2)$, not $\text{ATT}(t^{\ast})$.
 
 ### `ar1_adjusted`
 Adjusts for assumed AR(1) decay:
 
-$$\widehat{\text{ATT}}(t^*) = \frac{\text{DiD}(t_1, t_2)}{\rho^{t_2 - t^*}}$$
+$$\widehat{\text{ATT}}(t^{\ast}) = \frac{\text{DiD}(t_1, t_2)}{\rho^{t_2 - t^{\ast}}}$$
 
 Use the sensitivity plot to check robustness across values of $\rho$.
 
 ### `monotone_lb`
-Under non-increasing treatment effects ($\text{ATT}(t) \leq \text{ATT}(t^*)$ for $t > t^*$), the standard DiD is a **lower bound** on $\text{ATT}(t^*)$.
+Under non-increasing treatment effects ($\text{ATT}(t) \leq \text{ATT}(t^{\ast})$ for $t > t^{\ast}$), the standard DiD is a **lower bound** on $\text{ATT}(t^{\ast})$.
 
 ## Sensitivity Analysis
 
-The sensitivity plot shows $\widehat{\text{ATT}}(t^*)$ as a function of assumed $\rho$:
+The sensitivity plot shows $\widehat{\text{ATT}}(t^{\ast})$ as a function of assumed $\rho$:
 - $\rho = 1$: no dynamics — standard DiD is unbiased
 - $\rho < 1$: decaying effects — standard DiD under-estimates
 - $\rho > 1$: growing effects — standard DiD over-estimates
@@ -114,7 +114,7 @@ fig = plot_monte_carlo(mc)
 
 See [THEORY.md](THEORY.md) for the full derivation of the bias formula, mismatch severity, and monotone lower bound.
 
-The key parameter is the **temporal position** $\tau = (t^* - t_1)/(t_2 - t_1) \in (0,1)$.
+The key parameter is the **temporal position** $\tau = (t^{\ast} - t_1)/(t_2 - t_1) \in (0,1)$.
 **Mismatch severity** $= 4\tau(1-\tau)$ is maximized at $\tau = 0.5$ and zero when the shock coincides with a cross-section year.
 
 ## Citation
