@@ -4,6 +4,8 @@ A Python toolkit for diagnosing and correcting temporal misalignment in historic
 
 [![Tests](https://github.com/Chin933/temporal-did/actions/workflows/tests.yml/badge.svg)](https://github.com/Chin933/temporal-did/actions/workflows/tests.yml)
 
+![Case Classification Diagram](docs/cases.png)
+
 ## The Problem
 
 In historical empirical research, a policy shock at year $t^{\ast}$ often falls between available cross-sections $t_1 < t^{\ast} < t_2$. The naive approach — treating $t_2$ as the post-period — estimates the treatment effect at $t_2$, not at the shock year:
