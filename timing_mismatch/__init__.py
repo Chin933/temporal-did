@@ -9,6 +9,7 @@ from .diagnostics import (
     timing_mismatch_diagnostics,
 )
 from .plot import (
+    plot_case_diagram,
     plot_diagnostics,
     plot_identified_set,
     plot_monte_carlo,
@@ -28,6 +29,7 @@ __all__ = [
     "plot_temporal_mismatch",
     "plot_post_dids",
     "plot_identified_set",
+    "plot_case_diagram",
     # Legacy single-pair API
     "timing_mismatch_diagnostics",
     "DiagnosticsOutput",
