@@ -2,97 +2,113 @@
 
 ## Setup
 
-Let $N$ units be observed at two cross-sections, $t_1$ (pre-shock) and $t_2$ (post-shock). A policy shock occurs at $t^{\ast} \in (t_1, t_2)$ — strictly between the two observation points. Unit $i$ receives treatment $D_i \in \{0, 1\}$.
+Let $N$ units be observed at cross-sections $\mathcal{T} = \{t_1, \ldots, t_K\}$. A policy shock occurs at $t^{\ast} \notin \mathcal{T}$ — the shock year is never directly observed. Denote pre-shock years $\mathcal{T}^- = \{t \in \mathcal{T} : t < t^{\ast}\}$ and post-shock years $\mathcal{T}^+ = \{t \in \mathcal{T} : t > t^{\ast}\}$.
 
-**Target parameter**:
+Unit $i$ receives binary treatment $D_i \in \{0, 1\}$. The **target parameter** is:
 
 $$\text{ATT}(t^{\ast}) = \mathbb{E}\bigl[Y_{it^{\ast}}(1) - Y_{it^{\ast}}(0) \mid D_i = 1\bigr]$$
 
-We never observe $Y_{it^{\ast}}$ — the problem is that $t^{\ast}$ is not a data-collection year.
+We never observe $Y_{it^{\ast}}$ — the shock year is not a data-collection year.
 
 ---
 
 ## Standard DiD and the Mismatch
 
-**Assumption (Parallel Trends)**: $\mathbb{E}[Y_{it}(0) - Y_{is}(0) \mid D_i = 1] = \mathbb{E}[Y_{it}(0) - Y_{is}(0) \mid D_i = 0]$ for all $s, t$.
+**Assumption (Parallel Trends):** For all $s, t$,
 
-Under parallel trends, standard DiD using $(t_1, t_2)$ identifies:
+$$\mathbb{E}[Y_{it}(0) - Y_{is}(0) \mid D_i = 1] = \mathbb{E}[Y_{it}(0) - Y_{is}(0) \mid D_i = 0]$$
 
-$$\text{DiD}(t_1, t_2) = \mathbb{E}[Y_{it_2}(1) - Y_{it_2}(0) \mid D_i = 1] = \text{ATT}(t_2)$$
+Under parallel trends, a DiD using any $(t_{\text{pre}}, t_k)$ pair identifies $\text{ATT}(t_k)$:
 
-This equals $\text{ATT}(t^{\ast})$ only when treatment effects are **constant over time**.
+$$\text{DiD}(t_{\text{pre}}, t_k) = \text{ATT}(t_k), \qquad t_k \in \mathcal{T}^+$$
 
----
-
-## Mismatch Severity
-
-Define the **temporal position** of the shock:
-
-$$\tau = \frac{t^{\ast} - t_1}{t_2 - t_1} \;\in\; (0, 1)$$
-
-The **mismatch severity** is:
-
-$$\text{severity}(\tau) = 4\tau(1-\tau) \;\in\; [0, 1]$$
-
-| Value | Condition |
-|-------|-----------|
-| **1** | $t^{\ast} = (t_1 + t_2)/2$ — shock exactly at the midpoint (worst case) |
-| **0** | $\tau \to 0$ or $\tau \to 1$ — shock coincides with a cross-section year |
-
-Severity captures how exposed the estimate is to treatment effect dynamics. At severity 1, even small deviations from constant effects produce large biases.
+This equals $\text{ATT}(t^{\ast})$ **only when treatment effects are constant over time**.
 
 ---
 
-## Bias under AR(1) Dynamics
+## Treatment Effect Dynamics: AR(1) Model
 
-Suppose treatment effects follow an AR(1) process after the shock:
+Suppose post-shock effects follow an AR(1) process:
 
 $$\text{ATT}(t) = \text{ATT}(t^{\ast}) \cdot \rho^{\,t - t^{\ast}}, \qquad t \geq t^{\ast}$$
 
-Then:
+Then for any post-shock cross-section $t_k$:
 
-$$\text{DiD}(t_1, t_2) = \text{ATT}(t_2) = \text{ATT}(t^{\ast}) \cdot \rho^{\,t_2 - t^{\ast}}$$
+$$\text{DiD}(t_{\text{pre}}, t_k) = \text{ATT}(t^{\ast}) \cdot \rho^{\,t_k - t^{\ast}}$$
 
-**Bias of the standard estimator**:
+| $\rho$ | Dynamics | Bias of standard DiD |
+|--------|----------|----------------------|
+| $< 1$ | Decaying | Negative — under-estimates ATT$(t^{\ast})$ |
+| $= 1$ | Constant | Zero — unbiased |
+| $> 1$ | Growing  | Positive — over-estimates ATT$(t^{\ast})$ |
 
-$$\text{Bias} = \text{DiD}(t_1, t_2) - \text{ATT}(t^{\ast}) = \text{ATT}(t^{\ast})\bigl(\rho^{t_2 - t^{\ast}} - 1\bigr)$$
+---
 
-| $\rho$ | Dynamics | Sign of bias |
-|--------|----------|--------------|
-| $< 1$ | Decaying | Negative — standard DiD **under-estimates** ATT$(t^{\ast})$ |
-| $= 1$ | Constant | Zero — standard DiD is **unbiased** |
-| $> 1$ | Growing  | Positive — standard DiD **over-estimates** ATT$(t^{\ast})$ |
+## Case Classification
+
+With multiple post-shock cross-sections, the pattern of $\{\text{DiD}(t_{\text{pre}}, t_k)\}_{t_k \in \mathcal{T}^+}$ determines what can be identified.
+
+### Case 1 — Effect persists or grows ($\rho \geq 1$)
+
+All post-shock DiDs are significant and stable or increasing over time. Standard DiD is valid. Report dynamic ATT$(t_k)$ at each cross-section.
+
+### Case 2 — Effect decays, still visible ($\rho < 1$, effect detectable)
+
+At least one post-shock DiD is significant, and the sequence is declining. Taking logarithms of the AR(1) model:
+
+$$\log|\text{DiD}(t_{\text{pre}}, t_k)| = \underbrace{\log|\text{ATT}(t^{\ast})|}_{\text{intercept}} + (t_k - t^{\ast}) \cdot \underbrace{\log\rho}_{\text{slope}}$$
+
+This is a linear model in event time $(t_k - t^{\ast})$. Fitting by WLS (weights $= 1/\text{SE}^2$) across all post-cross-sections jointly identifies both $\rho$ and ATT$(t^{\ast})$ — **without assuming $\rho$**.
+
+**With staggered timing**: If different cohorts $g$ are treated at different times, define event time $\tau_{gk} = t_k - g$ for cohort $g$ observed at calendar time $t_k$. Under homogeneous ATT$(t^{\ast})$:
+
+$$\log|\text{DiD}(g, t_k)| = \log|\text{ATT}(t^{\ast})| + \tau_{gk} \cdot \log\rho$$
+
+The cross-cohort variation in $\tau_{gk}$ at the same calendar time identifies $\rho$ separately from ATT$(t^{\ast})$.
+
+### Case 3a — Effect decayed before first post-period
+
+All post-shock DiDs are statistically indistinguishable from zero. Under AR(1):
+
+$$\text{ATT}(t^{\ast}) = \frac{\text{DiD}(t_{\text{pre}}, t_k)}{\rho^{t_k - t^{\ast}}}$$
+
+Since DiD $\approx 0$, we cannot pin down ATT$(t^{\ast})$ without knowing $\rho$. The **identified set** for a given $\rho$ is:
+
+$$\text{ATT}(t^{\ast}) \in \left[\frac{\text{CI}^{\text{lo}}_{t_k}}{\rho^{t_k - t^{\ast}}},\ \frac{\text{CI}^{\text{hi}}_{t_k}}{\rho^{t_k - t^{\ast}}}\right]$$
+
+As $\rho \to 0$, the interval expands toward $\pm\infty$: rapid decay makes any ATT$(t^{\ast})$ consistent with the data. The tightest bounds come from the earliest $t_k \in \mathcal{T}^+$ (shortest gap).
+
+### Case 3b — All post DiDs $\approx 0$, staggered timing available
+
+A late-treated cohort $g$ may still show a detectable effect at calendar times where an early-treated cohort already shows zero. This differential visibility identifies $\rho$ via the staggered log-linear regression above. The Case 3a identified set is also reported as a fallback.
+
+---
+
+## Mismatch Severity (Two-Period Special Case)
+
+When only a single pre-post pair $(t_1, t_2)$ is available, define the **temporal position**:
+
+$$\tau = \frac{t^{\ast} - t_1}{t_2 - t_1} \in (0, 1)$$
+
+The **mismatch severity**:
+
+$$\text{severity}(\tau) = 4\tau(1-\tau) \in [0, 1]$$
+
+equals 1 when the shock falls at the midpoint (worst case), and 0 when it coincides with a cross-section year.
 
 **AR(1)-adjusted estimator** (point-identified given $\rho$):
 
-$$\widehat{\text{ATT}}(t^{\ast}) = \frac{\text{DiD}(t_1, t_2)}{\rho^{\,t_2 - t^{\ast}}}$$
+$$\widehat{\text{ATT}}(t^{\ast}) = \frac{\text{DiD}(t_1, t_2)}{\rho^{t_2 - t^{\ast}}}$$
 
-The sensitivity plot displays $\widehat{\text{ATT}}(t^{\ast})$ over a grid of $\rho \in [0.5, 1.5]$. A flat curve near $\rho = 1$ indicates robustness to the assumed dynamics.
-
----
-
-## Monotone Lower Bound
-
-Without parametric assumptions, we can still partially identify $\text{ATT}(t^{\ast})$.
-
-**Proposition.** Suppose treatment effects are *non-increasing* after the shock:
-
-$$\text{ATT}(t) \leq \text{ATT}(t^{\ast}) \quad \text{for all } t \geq t^{\ast}$$
-
-Then:
-
-$$\text{DiD}(t_1, t_2) = \text{ATT}(t_2) \leq \text{ATT}(t^{\ast})$$
-
-The standard DiD is a valid **lower bound** on ATT$(t^{\ast})$, and this bound is **sharp** (attained at $\rho = 1$).
-
-The monotonicity assumption is natural for many historical policy shocks, where the immediate implementation effect is largest and subsequent adjustment reduces the treatment contrast over time.
+**Monotone lower bound**: If treatment effects are non-increasing after the shock ($\text{ATT}(t) \leq \text{ATT}(t^{\ast})$ for $t \geq t^{\ast}$), then DiD$(t_1, t_2) = \text{ATT}(t_2) \leq \text{ATT}(t^{\ast})$ is a sharp lower bound.
 
 ---
 
-## Summary of Strategies
+## Summary of Estimators
 
-| Strategy | Assumption | Object identified |
-|----------|------------|-------------------|
-| `standard` | Parallel trends | ATT$(t_2)$ |
-| `ar1_adjusted` | AR(1) dynamics with known $\rho$ | ATT$(t^{\ast})$ |
-| `monotone_lb` | Parallel trends + non-increasing effects | Lower bound on ATT$(t^{\ast})$ |
+| Case | Data requirement | Estimator | Identifies |
+|------|-----------------|-----------|------------|
+| 1 | Multiple post cross-sections, stable DiDs | Dynamic DiD at each $t_k$ | ATT$(t_k)$ for each $t_k$ |
+| 2 | $\geq 2$ post cross-sections or staggered timing | Log-linear WLS | ATT$(t^{\ast})$ and $\rho$ jointly |
+| 3a | $\geq 1$ post cross-section | Sensitivity analysis over $\rho$ | Identified set for ATT$(t^{\ast})$ |
+| 3b | Staggered timing | Staggered log-linear WLS + identified set | ATT$(t^{\ast})$ and $\rho$ (where cohort variation is sufficient) |
