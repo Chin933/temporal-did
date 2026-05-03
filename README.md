@@ -1,32 +1,29 @@
 # timing-mismatch
 
-A Python toolkit for diagnosing and correcting temporal misalignment in historical difference-in-differences research.
+A Python toolkit for diagnosing temporal misalignment in historical difference-in-differences research — when a policy shock at $t^{\ast}$ falls between the available cross-sections.
 
 [![Tests](https://github.com/Chin933/temporal-did/actions/workflows/tests.yml/badge.svg)](https://github.com/Chin933/temporal-did/actions/workflows/tests.yml)
 
+![Case Classification Diagram](docs/cases.png)
+
 ## The Problem
 
-In historical empirical research, a policy shock at year $t^*$ often falls between available cross-sections $t_1 < t^* < t_2$. The naive approach — treating $t_2$ as the post-period — estimates the treatment effect at $t_2$, not at the shock year:
+Historical records rarely coincide with the exact year of a policy shock. You may have prefectural gazetteers from 1777, 1820, 1888, and 1911, but the reform you study happened in 1796. The standard approach — using the nearest post-shock cross-section as the "post" period — estimates the treatment effect at $t_2$, not at $t^{\ast}$:
 
-$$\text{DiD}(t_1, t_2) = \hat{\text{ATT}}(t_2) \neq \text{ATT}(t^*)$$
+$$\text{DiD}(t_1, t_2) = \widehat{\text{ATT}}(t_2) \neq \text{ATT}(t^{\ast})$$
 
-**Example:** You study an 1800 policy reform, but only have prefectural records for 1796 and 1820. Depending on whether treatment effects decay, persist, or grow over the 20-year window, the mismatch between your estimate and the true effect at $t^*$ can be substantial.
+How large the bias is depends on two things: **how far** $t^{\ast}$ is from the nearest cross-section, and **how fast** the treatment effect decays after the shock.
 
-The bias depends on:
-- **Temporal position** — how close is $t^*$ to each cross-section?
-- **Treatment effect dynamics** — do effects decay, persist, or accumulate?
-- **Pre-trend shape** — linear or non-linear?
+## Case Classification
 
-## What This Package Does
+The toolkit automatically classifies your setting based on what the post-shock DiDs reveal.
 
-Given your cross-section years and shock year, `timing-mismatch` provides:
-
-| Output | Description |
-|--------|-------------|
-| **Mismatch severity** | $4\tau(1-\tau)$ where $\tau = (t^* - t_1)/(t_2 - t_1)$; equals 1 at the midpoint |
-| **Three alignment estimates** | Under different assumptions about treatment dynamics |
-| **Sensitivity analysis** | Implied $\text{ATT}(t^*)$ as a function of assumed decay rate $\rho$ |
-| **Monte Carlo** | Bias and RMSE under known DGPs |
+| Case | Pattern in post-shock DiDs | Identification strategy |
+|------|---------------------------|------------------------|
+| **1** | Significant and stable/growing | Dynamic ATT$(t_k)$ at each cross-section; standard DiD valid |
+| **2** | Significant but declining | Jointly estimate decay rate $\rho$ and ATT$(t^{\ast})$ via log-linear regression across post periods (or staggered cohorts) |
+| **3a** | All $\approx 0$, no staggered timing | Effect decayed before first observation; sensitivity bounds over $\rho$ |
+| **3b** | All $\approx 0$, staggered timing available | Use cohort timing variation to attempt identification |
 
 ## Installation
 
@@ -39,55 +36,74 @@ pip install -e .
 ## Quick Start
 
 ```python
-import pandas as pd
-from timing_mismatch import timing_mismatch_diagnostics, plot_diagnostics
+from timing_mismatch import diagnose, plot_temporal_mismatch, plot_case_diagram
 
-# df: panel DataFrame with columns [county_id, year, outcome, treatment]
-result = timing_mismatch_diagnostics(
+# df: panel with columns [county_id, year, outcome, treatment]
+result = diagnose(
     data=df,
     outcome="grain_tax",
     treatment="reform",
-    shock_year=1800,       # t*: when the reform happened
-    pre_year=1796,         # t1: earliest available cross-section
-    post_year=1820,        # t2: post-shock cross-section
+    shock_year=1796,           # t*: reform year (not in data)
+    pre_years=[1777],          # all pre-shock cross-sections
+    post_years=[1820, 1888, 1911],   # all post-shock cross-sections
     unit_id="county_id",
 )
 
 print(result.summary())
-# Timing Mismatch Diagnostics
-#   Cross-sections : t1=1796, t2=1820
-#   Shock year     : t*=1800
-#   Position tau   : 0.167  (closer to t1)
-#   Mismatch sev.  : 0.556  (MODERATE)
+# Temporal Mismatch Diagnostics
+#   Shock year   : t* = 1796
+#   Pre periods  : [1777]
+#   Post periods : [1820, 1888, 1911]
+#   Case         : 2  —  Effect decays but visible; jointly estimate rho and ATT(t*)
 #   ...
 
-fig = plot_diagnostics(result)
+fig = plot_temporal_mismatch(result)
 fig.savefig("diagnostics.png", dpi=150, bbox_inches="tight")
 ```
 
-## Alignment Strategies
+### With staggered treatment timing
 
-### `standard`
-Plain DiD using $(t_1, t_2)$. Estimates $\text{ATT}(t_2)$, not $\text{ATT}(t^*)$.
+If different units were treated in different years, pass a column with each unit's shock year:
 
-### `ar1_adjusted`
-Adjusts for assumed AR(1) decay:
+```python
+result = diagnose(
+    data=df,
+    outcome="grain_tax",
+    treatment="reform",
+    shock_year=1796,
+    pre_years=[1777],
+    post_years=[1820, 1888, 1911],
+    unit_id="county_id",
+    shock_year_col="reform_year",   # NaN for never-treated units
+)
+```
 
-$$\widehat{\text{ATT}}(t^*) = \frac{\text{DiD}(t_1, t_2)}{\rho^{t_2 - t^*}}$$
+## Case-Specific Outputs
 
-Use the sensitivity plot to check robustness across values of $\rho$.
+### Case 1 — Effect persists or grows
+Reports dynamic ATT$(t_k)$ for each post-shock cross-section.
 
-### `monotone_lb`
-Under non-increasing treatment effects ($\text{ATT}(t) \leq \text{ATT}(t^*)$ for $t > t^*$), the standard DiD is a **lower bound** on $\text{ATT}(t^*)$.
+### Case 2 — Effect decays, still visible
+Jointly estimates decay rate $\rho$ and ATT$(t^{\ast})$ by log-linearising the AR(1) model:
 
-## Sensitivity Analysis
+$$\log|\text{DiD}(t_1, t_k)| = \log|\text{ATT}(t^{\ast})| + (t_k - t^{\ast})\log\rho$$
 
-The sensitivity plot shows $\widehat{\text{ATT}}(t^*)$ as a function of assumed $\rho$:
-- $\rho = 1$: no dynamics — standard DiD is unbiased
-- $\rho < 1$: decaying effects — standard DiD under-estimates
-- $\rho > 1$: growing effects — standard DiD over-estimates
+Fitted by WLS across post-periods (or cohort $\times$ calendar-time cells for staggered data).
 
-A flat curve near $\rho = 1$ means your estimate is robust to reasonable assumptions about dynamics.
+### Case 3a — Effect decayed before first post period
+Returns an **identified set**: for each assumed $\rho$, the implied ATT$(t^{\ast})$ and its 95% CI. A fast-decay assumption $(\rho \ll 1)$ widens the interval toward $+\infty$ — the data cannot identify ATT$(t^{\ast})$ without additional assumptions.
+
+### Case 3b — All post DiDs $\approx 0$, staggered timing available
+Routes to the Case 2 staggered estimator using cohort variation. The identified set is also reported as a fallback.
+
+## Visualising the Four Cases
+
+```python
+from timing_mismatch import plot_case_diagram
+
+fig = plot_case_diagram()   # conceptual parallel-trends diagram
+fig.savefig("cases.png", dpi=150, bbox_inches="tight")
+```
 
 ## Monte Carlo Validation
 
@@ -106,16 +122,12 @@ mc = run_monte_carlo(
     adjustment_rho=0.95,
 )
 print(mc.attrs["summary"])
-
 fig = plot_monte_carlo(mc)
 ```
 
 ## Theoretical Background
 
-See [THEORY.md](THEORY.md) for the full derivation of the bias formula, mismatch severity, and monotone lower bound.
-
-The key parameter is the **temporal position** $\tau = (t^* - t_1)/(t_2 - t_1) \in (0,1)$.
-**Mismatch severity** $= 4\tau(1-\tau)$ is maximized at $\tau = 0.5$ and zero when the shock coincides with a cross-section year.
+See [THEORY.md](THEORY.md) for derivations of the bias formula, case identification conditions, and the log-linear joint estimator.
 
 ## Citation
 
